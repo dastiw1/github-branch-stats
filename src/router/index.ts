@@ -1,7 +1,9 @@
 import Vue from 'vue';
 import VueRouter, { RouteConfig } from 'vue-router';
-import Home from '../views/Home.vue';
+import Home from '@/modules/stats/Home.vue';
 import Page403 from '@/modules/auth/403.vue';
+import AuthProcess from '@/modules/auth/AuthProcess.vue';
+import Page404 from '@/modules/global/404.vue';
 Vue.use(VueRouter);
 
 const routes: Array<RouteConfig> = [
@@ -11,17 +13,29 @@ const routes: Array<RouteConfig> = [
     component: Home,
   },
   {
-    path: '/about',
-    name: 'About',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ '../views/About.vue'),
+    path: '/auth',
+    component: {
+      render(h) {
+        return h('router-view');
+      },
+    },
+    children: [
+      {
+        path: 'login',
+        name: 'Login',
+        component: Page403,
+      },
+      {
+        path: 'process',
+        name: 'AuthProcess',
+        component: AuthProcess,
+      },
+    ],
   },
   {
-    path: '/login',
-    name: 'Login',
-    component: Page403,
+    path: '*',
+    name: 'NotFound',
+    component: Page404,
   },
 ];
 

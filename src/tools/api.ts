@@ -1,7 +1,8 @@
 import axios, { AxiosRequestConfig, AxiosResponse, CancelToken, Method, ResponseType } from 'axios';
-import Vue from 'vue';
+/* import Vue from 'vue';
 import store from '@/store';
 import router from '@/router';
+ */
 import LS from '@/types/localstorage';
 
 axios.defaults.baseURL = process.env.VUE_APP_BACKEND;
@@ -12,34 +13,21 @@ axios.defaults.headers = {
   },
 };
 
-export interface APIResponse {
-  code?: number;
-  data?: {
-    [key: string]: unknown;
-  };
-  result: 'success' | 'error';
-}
 
-export interface IResponseError {
-  code?: string;
-  message?: string;
-  title: string;
+export interface IResponseError extends Record<string, unknown> {
+  error: string;
+  error_description: string;
+  error_url: string;
 }
 
 export interface IResponseErrorValidation {
   [key: string]: string;
 }
 
-export interface APIResponseError extends APIResponse {
-  result: 'error';
-  data: {
-    error?: IResponseError;
-    validation?: IResponseErrorValidation;
-  };
-}
+export type APIResponseError = IResponseError;
 
-export interface APIResponseSuccess extends APIResponse {
-  result: 'success';
+export interface APIResponseSuccess {
+  [key: string]: any;
 }
 
 export interface IAPIRequest {
@@ -58,7 +46,6 @@ export interface IAPIRequest {
 
 export interface IHandleErrorResult {
   message: string;
-  validation: Nullable<IResponseErrorValidation>;
 }
 
 export async function request<T>(
@@ -96,22 +83,18 @@ export async function request<T>(
   }
 }
 
-function handleError({ data: { error, validation } }: APIResponseError): IHandleErrorResult {
+function handleError(data: APIResponseError): IHandleErrorResult {
   let message: Nullable<string> = '';
 
-  if (error) {
-    message = error.title || error.message;
+  if (data.error) {
+    message = data.error_description;
   }
 
   if (!message) {
     message = 'Unknown error';
   }
 
-  if (validation && !Array.isArray(validation)) {
-    message = Object.values(validation).join('<br/>');
-  }
-
-  return { message, validation };
+  return { message };
 }
 
 axios.interceptors.request.use(function (config) {
@@ -128,11 +111,11 @@ axios.interceptors.request.use(function (config) {
 
 axios.interceptors.response.use(
   function (response: AxiosResponse<APIResponseSuccess | APIResponseError>) {
-    if (response.data.result === 'success') {
-      return Promise.resolve(response);
+    console.log('test', response.data);
+    if (response?.data?.error) {
+      return Promise.reject(handleError(response.data as APIResponseError));
     }
-
-    return Promise.reject(handleError(response.data));
+    return Promise.resolve(response);
   },
   async (error) => {
     const response: Nullable<APIResponseError> = error.response;
@@ -157,19 +140,9 @@ axios.interceptors.response.use(
 );
 
 // Use inside controllers
-export const getResponseErrorsArray = (response: APIResponseError) => {
-  if (response.data.validation) {
-    const validations: string[] = [];
-
-    for (const [key, value] of Object.entries(response.data.validation)) {
-      validations.push(value);
-    }
-
-    return validations;
-  }
-
-  if (response.data.error) {
-    return [response.data.error.message || response.data.error.title];
+export const getResponseErrorsArray = (response: APIResponseError): string[] => {
+  if (response.error_description) {
+    return [response.error_description];
   }
 
   return [];

@@ -1,7 +1,5 @@
-
-
 const LS = {
-  get(key: string): any {
+  get<T>(key: string): T {
     const value = localStorage.getItem(key);
 
     let parsedValue;
@@ -18,16 +16,17 @@ const LS = {
       parsedValue = false;
     }
 
-    return parsedValue;
+    return parsedValue as T;
   },
-  set(key: string, value: any): void {
+  set<T>(key: string, value: T): void {
+    let val = '';
     if (typeof value === 'function') {
-      value = value.toString();
+      val = value.toString();
     } else if (typeof value !== 'string') {
-      value = JSON.stringify(value);
+      val = JSON.stringify(value);
     }
 
-    localStorage.setItem(key, value);
+    localStorage.setItem(key, val);
   },
   remove(key: string): void {
     localStorage.removeItem(key);
@@ -37,8 +36,8 @@ const LS = {
   },
 };
 
-export const resetLS = () => {
-    LS.reset();
+export const resetLS = (): void => {
+  LS.reset();
 };
 
 export default LS;
