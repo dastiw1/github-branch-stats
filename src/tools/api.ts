@@ -3,7 +3,8 @@ import axios, { AxiosRequestConfig, AxiosResponse, CancelToken, Method, Response
 import store from '@/store';
 import router from '@/router';
  */
-import LS from '@/types/localstorage';
+import LS from '@/tools/localstorage';
+import { GLOBAL_CONST } from '@/types/constants';
 
 axios.defaults.baseURL = process.env.VUE_APP_BACKEND;
 axios.defaults.headers = {
@@ -12,7 +13,6 @@ axios.defaults.headers = {
     'Content-Type': 'application/json',
   },
 };
-
 
 export interface IResponseError extends Record<string, unknown> {
   error: string;
@@ -98,7 +98,7 @@ function handleError(data: APIResponseError): IHandleErrorResult {
 }
 
 axios.interceptors.request.use(function (config) {
-  const token = LS.get('auth_token');
+  const token = LS.get(GLOBAL_CONST.AUTH_TOKEN);
   if (token != '' && token != null) {
     config.headers.common = {
       Authorization: `${token}`,

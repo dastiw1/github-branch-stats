@@ -1,5 +1,5 @@
 const LS = {
-  get<T>(key: string): T {
+  get(key: string): any {
     const value = localStorage.getItem(key);
 
     let parsedValue;
@@ -16,16 +16,16 @@ const LS = {
       parsedValue = false;
     }
 
-    return parsedValue as T;
+    return parsedValue;
   },
-  set<T>(key: string, value: T): void {
-    let val = '';
+  set(key: string, value: any): void {
+    let val = value;
     if (typeof value === 'function') {
       val = value.toString();
     } else if (typeof value !== 'string') {
       val = JSON.stringify(value);
     }
-
+    
     localStorage.setItem(key, val);
   },
   remove(key: string): void {

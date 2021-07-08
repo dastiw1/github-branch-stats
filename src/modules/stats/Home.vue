@@ -9,13 +9,19 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from '@vue/composition-api';
+import LS from '@/tools/localstorage';
+import { defineComponent, onMounted, reactive } from '@vue/composition-api';
 import StatsFilters from './components/StatsFilters.vue';
 
 export default defineComponent({
   components: { StatsFilters },
   setup() {
-    return {};
+    onMounted(() => {
+      //
+    });
+    return {
+      //
+    };
   },
 });
 </script>

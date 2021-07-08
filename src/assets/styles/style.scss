@@ -1,9 +1,16 @@
+@import './components/buttons';
+@import './components/inputs';
+@import './components/list';
+
+.container {
+  margin: 0 auto;
+  max-width: 1260px;
+}
 .text-danger {
   color: #f00;
 }
 
-
-.title  {
-    font-size: 24px;
-    line-height: 1.4;
+.title {
+  font-size: 24px;
+  line-height: 1.4;
 }

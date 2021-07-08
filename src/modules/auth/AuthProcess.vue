@@ -6,7 +6,8 @@
 import { defineComponent, onMounted } from '@vue/composition-api';
 import router from '@/router';
 import AuthGithubRepository from '@/repositories/AuthGithubRepository';
-import LS from '@/types/localstorage';
+import LS from '@/tools/localstorage';
+import { GLOBAL_CONST } from '@/types/constants';
 export default defineComponent({
   setup() {
     const route = router.currentRoute;
@@ -20,8 +21,9 @@ export default defineComponent({
           code: code as string,
         })
           .then((res) => {
-            console.log('res', res);
-            LS.set('auth_token', res.access_token);
+            console.log('res', res, res.access_token);
+            
+            LS.set(GLOBAL_CONST.AUTH_TOKEN, res.access_token);
             router.push('/');
           })
           .catch((err) => {
