@@ -114,7 +114,7 @@ export const fetchPulls = limiter.wrap(async function (owner: string, repo: stri
 
 }) {
   return await axios
-    .request<Contributor[]>({
+    .request<PullRequest[]>({
       url: `/repos/${owner}/${repo}/pulls`,
       method: 'get',
       params: {

@@ -140,3 +140,8 @@ export interface Contributor {
   site_admin:          boolean;
   contributions:       number;
 }
+
+
+export interface PullRequest {
+  
+}
