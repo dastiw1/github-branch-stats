@@ -26,7 +26,7 @@
  * @emits input - срабатывает при любом изменении input value
  */
 import { computed, defineComponent, onMounted, ref, watch } from '@vue/composition-api';
-import { getPropertyFromItem } from '@/tools/utls';
+import { getPropertyFromItem } from '@/tools/utils';
 export default defineComponent({
   props: {
     value: {
@@ -57,6 +57,7 @@ export default defineComponent({
   emits: ['input', 'change'],
   setup(props, { emit }) {
     const internalValue = ref<string | Record<string | number, any>>('');
+
     const expanded = ref(false);
 
     function show() {
@@ -177,6 +178,7 @@ export default defineComponent({
   width: inherit;
   max-height: 260px;
   max-width: 300px;
+  min-width: 120px;
   overflow-x: hidden;
   overflow-y: auto;
 

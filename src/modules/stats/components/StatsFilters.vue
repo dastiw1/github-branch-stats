@@ -23,42 +23,87 @@
 
       <div class="form-control">
         <label for="">Ветка</label>
-        <select v-model="filterModel.branch" :disabled="isBranchInputDisabled">
-          <option v-for="(b, key) in branches" :key="key" @click="handleBranchInputChange(b)">
-            {{ b.name }}
+        <select v-model="getCurrentBranch" :disabled="isBranchInputDisabled">
+          <option
+            v-for="(b, key) in branches"
+            :key="key"
+            :value="b"
+            @click="handleBranchInputChange(b)"
+          >
+            {{ b }}
           </option>
         </select>
       </div>
+
+      <div class="form-control">
+        <label for="">Период</label>
+        <date-picker
+          v-model="filterModel.dateRange"
+          format="YYYY-MM-DDTHH:MM:SSZ"
+          range
+        ></date-picker>
+      </div>
+    </div>
+    <div class="flex-row">
+      <div class="form-control">
+        <label for="">Тип данных</label>
+        <select multiple v-model="filterModel.dataTypes">
+          <option v-for="(dt, key) in dataTypes" :key="key" :value="dt.value">
+            {{ dt.text }}
+          </option>
+        </select>
+      </div>
+    </div>
+    <div class="flex-row">
+      <button class="btn" type="button" @click="applyFilters">Применить</button>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, reactive, toRefs, watch } from '@vue/composition-api';
+import {
+  computed,
+  defineComponent,
+  reactive,
+  toRefs,
+  watch,
+  WritableComputedRef,
+} from '@vue/composition-api';
 import debounce from 'lodash/debounce';
+import DatePicker from 'vue2-datepicker';
+import 'vue2-datepicker/index.css';
+
 import VAutocomplete from './VAutocomplete.vue';
 import githubAPI from '@/repositories/GithubRepository';
-import { Branch, RepositoryItem } from '@/types/repos';
-import { removeHost } from '@/tools/utls';
+import { Branch } from '@/types/repos';
+import { removeHost } from '@/tools/utils';
+import { StasFilterParams, DataTypeItem } from '@/modules/stats/types';
+
 const githubUrlRegexp = /^([-\w.]+)\/([-\w.]+)$/;
 
 export default defineComponent({
-  components: { VAutocomplete },
+  components: { VAutocomplete, DatePicker },
   emits: ['change'],
   setup(props, { emit }) {
+    // Содержит списки
     const models = reactive<{
       repositories: { text: string; value: string }[];
-      branches: any[];
+      branches: string[];
+      dataTypes: DataTypeItem[];
     }>({
       repositories: [],
       branches: [],
+      dataTypes: [
+        { text: 'Активные участники', value: 'active' },
+        { text: 'Пассивные участники', value: 'passive' },
+      ],
     });
-    const filterModel = reactive<{
-      url: string;
-      branch: Branch | null;
-    }>({
+    // основной модель фильтров
+    const filterModel = reactive<StasFilterParams>({
       url: '',
       branch: null,
+      dateRange: [],
+      dataTypes: [],
     });
 
     function isValidUrl(str: string) {
@@ -67,6 +112,15 @@ export default defineComponent({
 
     const isBranchInputDisabled = computed(() => {
       return !isValidUrl(filterModel.url);
+    });
+
+    const getCurrentBranch: WritableComputedRef<string | null> = computed({
+      get() {
+        return filterModel.branch || null;
+      },
+      set(val: string | null): void {
+        filterModel.branch = models.branches.find((b) => b === val) || null;
+      },
     });
 
     const searchRepo = debounce((queryString: string) => {
@@ -78,39 +132,60 @@ export default defineComponent({
       });
     }, 800);
 
-    const getStats = debounce((url: string) => {
+    const getBrancesList = debounce((url: string) => {
       const [owner, repo]: string[] = url.split('/');
       githubAPI.fetchRepoBranches(owner, repo).then((data) => {
         console.log('branches', data);
-        models.branches = data;
+        models.branches = data.map((b) => b.name);
       });
     }, 800);
 
     function handleUrlInputChange(val: string) {
       console.log(isValidUrl(val));
       if (isValidUrl(val)) {
-        getStats(val);
+        getBrancesList(val);
       } else {
         searchRepo(val);
       }
     }
 
-    function handleBranchInputChange(branch: Branch) {
+    function handleBranchInputChange(branch: string) {
       filterModel.branch = branch;
     }
 
-    watch(filterModel, (model) => {
-      emit('change', model);
-    });
+    function handleDataTypeInputChange(datatype: DataTypeItem) {
+      const index = filterModel.dataTypes.indexOf(datatype.value);
+      if (index >= 0) {
+        filterModel.dataTypes.splice(index, 1);
+      } else {
+        filterModel.dataTypes.push(datatype.value);
+      }
+    }
+
+    function applyFilters() {
+      {
+        const { url, ...payload } = filterModel;
+        const [owner, repo] = url.split('/');
+        emit('change', {
+          owner,
+          repo,
+          ...payload,
+        });
+      }
+    }
 
     return {
       ...toRefs(models),
       githubUrlRegexp,
       filterModel,
       // computed ->
+      getCurrentBranch,
       isBranchInputDisabled,
       handleUrlInputChange,
+      getBrancesList,
       handleBranchInputChange,
+      handleDataTypeInputChange,
+      applyFilters,
     };
   },
 });
@@ -119,10 +194,18 @@ export default defineComponent({
 <style lang="scss" scoped>
 label {
   margin-right: 10px;
+  margin-bottom: 8px;
 }
 .form-control {
   margin: 8px;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  > input,
+  select {
+    min-width: 186px;
+  }
   + .form-control {
     margin-left: 12px;
   }

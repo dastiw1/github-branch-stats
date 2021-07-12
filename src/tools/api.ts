@@ -111,10 +111,11 @@ axios.interceptors.request.use(function (config) {
 
 axios.interceptors.response.use(
   function (response: AxiosResponse<APIResponseSuccess | APIResponseError>) {
-    console.log('test', response.data);
+    
     if (response?.data?.error) {
       return Promise.reject(handleError(response.data as APIResponseError));
     }
+    console.log('test', response);
     return Promise.resolve(response);
   },
   async (error) => {
