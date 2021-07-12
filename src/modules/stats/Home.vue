@@ -117,7 +117,7 @@ export default defineComponent({
         until: params.dateRange[1],
       };
       let count = 0;
-      const res = await GithubRepository.fechCommits(params.owner, params.repo, paginationParams);
+      const res = await GithubRepository.fetchCommits(params.owner, params.repo, paginationParams);
       console.log('commits res', res);
       if (res.links?.last?.page) {
         count = parseInt(res.links.last.page);

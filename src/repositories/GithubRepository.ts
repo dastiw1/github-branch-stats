@@ -87,7 +87,7 @@ interface GithubHeaderLinks {
   [rel: string]: GithubHeaderLink;
 }
 
-export const fechCommits = limiter.wrap(async function (
+export const fetchCommits = limiter.wrap(async function (
   owner: string,
   repo: string,
   params: FetchCommitsParams,
@@ -101,19 +101,41 @@ export const fechCommits = limiter.wrap(async function (
       },
     })
     .then((res) => {
-      console.log('commits', res);
       const links = parseLinkHeader(res.headers.link) as GithubHeaderLinks;
-      console.log('links', links);
+
       return {
         data: res.data,
         links,
       };
     });
 });
+
+export const fetchPulls = limiter.wrap(async function (owner: string, repo: string, params: {
+
+}) {
+  return await axios
+    .request<Contributor[]>({
+      url: `/repos/${owner}/${repo}/pulls`,
+      method: 'get',
+      params: {
+        ...params,
+      },
+    })
+    .then((res) => {
+      const links = parseLinkHeader(res.headers.link) as GithubHeaderLinks;
+
+      return {
+        data: res.data,
+        links,
+      };
+    });
+
+});
+
 export default {
   user,
   searchRepositories,
   fetchRepoBranches,
   fetchContributors,
-  fechCommits,
+  fetchCommits,
 };
