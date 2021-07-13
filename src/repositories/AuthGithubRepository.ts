@@ -18,6 +18,9 @@ export default {
       url: `${resource}/access_token`,
       method: 'post',
       data: payload,
+      headers: {
+        Accept: 'application/json',
+      },
     });
   },
 };

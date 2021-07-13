@@ -101,7 +101,7 @@ axios.interceptors.request.use(function (config) {
   const token = LS.get(GLOBAL_CONST.AUTH_TOKEN);
   if (token != '' && token != null) {
     config.headers.common = {
-      Authorization: `${token}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
   }

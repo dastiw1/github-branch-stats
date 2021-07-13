@@ -1,21 +1,45 @@
 <template>
   <loader v-if="isLoading" />
-  <div class="home" v-else>
-    <div class="container">
-      <h1 class="title">Главная</h1>
-    </div>
-    <stats-filters ref="filters" @change="getData" />
-    <div class="container">
-      <div class="row" v-if="activeContributers.length">
-        <h1 class="title">Активные пользователи</h1>
-        <user-stats-grid :users="activeContributers" />
+  <keep-alive v-else>
+    <div class="home">
+      <div class="container">
+        <h1 class="title">Главная</h1>
       </div>
-      <div class="row" v-if="passiveContributers.length">
-        <h1 class="title">Пассивные пользователи</h1>
-        <user-stats-grid :users="passiveContributers" />
+
+      <stats-filters ref="filters" @change="getData" />
+
+      <div class="container">
+        <div class="row">
+          <div class="pr-stats">
+            <dl>
+              <dt>Количество открытых pull requests (PR)</dt>
+              <dd>{{ openPrsCount }}</dd>
+              <dt>Количество закрытых pull requests (PR)</dt>
+              <dd>{{ closedPrsCount }}</dd>
+              <dt>Количество “старых” PR</dt>
+              <dd>{{ longRunningPrsCount }}</dd>
+            </dl>
+          </div>
+        </div>
+        <div class="row" v-if="activeContributers.length">
+          <h1 class="title">Активные пользователи</h1>
+          <stats-data-grid :users="activeContributers" :headers="gridHeaders.users">
+            <template v-slot:[`item.avatarUrl`]="{ item }">
+              <img class="ava-img" :src="item.avatarUrl" alt="Avatar" />
+            </template>
+          </stats-data-grid>
+        </div>
+        <div class="row" v-if="passiveContributers.length">
+          <h1 class="title">Пассивные пользователи</h1>
+          <stats-data-grid :users="passiveContributers" :headers="gridHeaders.users">
+            <template v-slot:[`item.avatarUrl`]="{ item }">
+              <img class="ava-img" :src="item.avatarUrl" alt="Avatar" />
+            </template>
+          </stats-data-grid>
+        </div>
       </div>
     </div>
-  </div>
+  </keep-alive>
 </template>
 
 <script lang="ts">
@@ -31,10 +55,10 @@ import {
 import LS from '@/tools/localstorage';
 
 import StatsFilters from './components/StatsFilters.vue';
-import { DataType, StasFilterParams } from '@/modules/stats/types';
+import { DataType } from '@/modules/stats/types';
 import GithubRepository from '@/repositories/GithubRepository';
 import { Contributor } from '@/types/repos';
-import UserStatsGrid from '@/modules/stats/components/UserStatsGrid.vue';
+import StatsDataGrid from '@/modules/stats/components/StatsDataGrid.vue';
 import Loader from '../global/components/Loader.vue';
 
 export type ExtendedStatsFilterParams = {
@@ -53,20 +77,35 @@ type ContributorItem = {
   prCount: number;
 };
 export default defineComponent({
-  components: { StatsFilters, UserStatsGrid, Loader },
+  components: { StatsFilters, StatsDataGrid, Loader },
   setup(_, { refs }) {
     const perPage = ref(30);
 
-    const data = reactive<{
+    const gridHeaders = {
+      users: {
+        avatarUrl: 'Аватар',
+        login: 'Логин',
+        commitsCount: 'Кол-во коммитов',
+      },
+      prs: {},
+    };
+
+    const list = reactive<{
       contributors: ContributorItem[];
     }>({
       contributors: [],
     });
 
+    const totals = reactive({
+      openPrsCount: 0,
+      closedPrsCount: 0,
+      longRunningPrsCount: 0,
+    });
+
     const isLoading = ref(false);
 
     const activeContributers = computed(() => {
-      const items = [...data.contributors].sort((a, b) => {
+      const items = [...list.contributors].sort((a, b) => {
         return b.commitsCount - a.commitsCount;
       });
 
@@ -74,7 +113,7 @@ export default defineComponent({
     });
 
     const passiveContributers = computed(() => {
-      const items = [...data.contributors].sort((a, b) => {
+      const items = [...list.contributors].sort((a, b) => {
         return a.commitsCount - b.commitsCount;
       });
 
@@ -83,7 +122,7 @@ export default defineComponent({
 
     async function getAllContributers(params: ExtendedStatsFilterParams) {
       let page = 1;
-      data.contributors = [];
+      list.contributors = [];
       let res: Contributor[] | null = null;
       const limit = 100;
 
@@ -92,9 +131,9 @@ export default defineComponent({
           per_page: limit,
           page,
         });
-        data.contributors.push(
+        list.contributors.push(
           ...res.map((c) => ({
-            login: c.login,
+            login: c.login.replace(/\[.+\]/gim, ''),
             id: c.id,
             avatarUrl: c.avatar_url,
             commitsCount: 0,
@@ -104,7 +143,7 @@ export default defineComponent({
         page++;
       }
 
-      Promise.resolve(data.contributors);
+      Promise.resolve(list.contributors);
     }
 
     async function getCommitsCount(params: ExtendedStatsFilterParams & { author: string }) {
@@ -127,32 +166,55 @@ export default defineComponent({
         count,
       };
     }
+
+    async function getOpenPrsCount(params: ExtendedStatsFilterParams) {
+      const res = await GithubRepository.searchForIssuesAndPr(
+        params.owner,
+        params.repo,
+        `is:open base:${params.branch} created: ${params.dateRange[0]}..${params.dateRange[1]}`,
+      );
+
+      totals.openPrsCount = res.total_count;
+    }
+    async function getClosePrsCount(params: ExtendedStatsFilterParams) {
+      const res = await GithubRepository.searchForIssuesAndPr(
+        params.owner,
+        params.repo,
+        `is:closed base:${params.branch} created: ${params.dateRange[0]}..${params.dateRange[1]}`,
+      );
+      totals.closedPrsCount = res.total_count;
+    }
+
     async function getData(params: ExtendedStatsFilterParams) {
       //
       console.log('params', params);
       isLoading.value = true;
       await getAllContributers(params);
-      data.contributors.forEach(async (user, index) => {
-        /* if (index > 0) {
-          return true;
-        } */
+      list.contributors.forEach(async (user, index) => {
         const { count } = await getCommitsCount({ ...params, author: user.login });
-        set(data.contributors, index, {
+        set(list.contributors, index, {
           ...user,
           commitsCount: count,
         });
 
-        if (index === data.contributors.length - 1) {
+        if (index === list.contributors.length - 1) {
           isLoading.value = false;
         }
       });
+
+      await getOpenPrsCount(params);
+      await getClosePrsCount(params);
+
+      isLoading.value = false;
     }
     onMounted(() => {
       //
     });
     return {
+      gridHeaders,
       isLoading,
-      ...toRefs(data),
+      ...toRefs(list),
+      ...toRefs(totals),
       // computed ->
       activeContributers,
       passiveContributers,
@@ -168,5 +230,38 @@ export default defineComponent({
   font-weight: bold;
   margin-top: 20px;
   margin-bottom: 10px;
+}
+
+.pr-stats {
+  text-align: left;
+  display: block;
+  margin: 16px 4px;
+  padding: 8px 0;
+  border-top: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+}
+
+img.ava-img {
+  width: 48px;
+  height: 48px;
+}
+@supports (display: grid) {
+  @media (min-width: 14em) {
+    dl {
+      display: grid;
+      grid-template-columns: minmax(min-content, 1fr) auto; /* первый столбец растянуть по всей свободной ширине */
+    }
+    dt,
+    dd {
+      padding: 0.5em 0;
+    }
+    dt:not(:last-of-type),
+    dd:not(:last-of-type) {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    }
+    dd {
+      margin: 0;
+    }
+  }
 }
 </style>

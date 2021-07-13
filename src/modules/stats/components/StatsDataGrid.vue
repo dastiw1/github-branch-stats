@@ -1,29 +1,32 @@
 <template functional>
   <div class="users-list">
     <div class="user-item">
-      <div class="user-prop">Аватар</div>
-      <div class="user-prop">Логин</div>
-      <div class="user-prop">Кол-во коммитов</div>
-      <div class="user-prop">Кол-во PR</div>
+      <div class="user-prop" v-for="header in Object.values(props.headers)" :key="header">
+        {{ header }}
+      </div>
     </div>
 
     <div class="user-item" v-for="user in props.users" :key="user.id">
-      <div class="user-prop">
-        <img :src="user.avatarUrl" alt="Avatar" />
+      <div class="user-prop" v-for="field in Object.keys(props.headers)" :key="field">
+        <slot :name="`item.${field}`" :item="user" :field="field">
+          {{ user[field] }}
+        </slot>
       </div>
-      <div class="user-prop">{{ user.login }}</div>
-      <div class="user-prop">{{ user.commitsCount }}</div>
-      <div class="user-prop">{{ user.prCount }}</div>
     </div>
   </div>
 </template>
 
-<script>
+<script lang="js">
 export default {
+  name: 'StatsDataGrid',
   props: {
     users: {
       type: Array,
       required: true,
+    },
+    headers: {
+      type: Object,
+      default: () => ({}),
     },
   },
 };
@@ -48,9 +51,5 @@ export default {
   padding: 16px;
   width: 25%;
   text-align: left;
-  > img {
-    width: 48px;
-    height: 48px;
-  }
 }
 </style>

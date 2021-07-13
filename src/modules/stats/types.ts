@@ -2,7 +2,7 @@ import { Branch } from '@/types/repos';
 
 export type DataType = 'passive' | 'active';
 
-export type StasFilterParams = {
+export type StatsFilterParams = {
   url: string;
   branch: string | null;
   dateRange: string[];

@@ -39,6 +39,7 @@
         <label for="">Период</label>
         <date-picker
           v-model="filterModel.dateRange"
+          value-type="format"
           format="YYYY-MM-DDTHH:MM:SSZ"
           range
         ></date-picker>
@@ -55,7 +56,14 @@
       </div>
     </div>
     <div class="flex-row">
-      <button class="btn" type="button" @click="applyFilters">Применить</button>
+      <button
+        class="btn submit-btn"
+        type="button"
+        :disabled="isApplyBtnDisabled"
+        @click="applyFilters"
+      >
+        Применить
+      </button>
     </div>
   </div>
 </template>
@@ -77,7 +85,7 @@ import VAutocomplete from './VAutocomplete.vue';
 import githubAPI from '@/repositories/GithubRepository';
 import { Branch } from '@/types/repos';
 import { removeHost } from '@/tools/utils';
-import { StasFilterParams, DataTypeItem } from '@/modules/stats/types';
+import { StatsFilterParams, DataTypeItem } from '@/modules/stats/types';
 
 const githubUrlRegexp = /^([-\w.]+)\/([-\w.]+)$/;
 
@@ -99,7 +107,7 @@ export default defineComponent({
       ],
     });
     // основной модель фильтров
-    const filterModel = reactive<StasFilterParams>({
+    const filterModel = reactive<StatsFilterParams>({
       url: '',
       branch: null,
       dateRange: [],
@@ -121,6 +129,24 @@ export default defineComponent({
       set(val: string | null): void {
         filterModel.branch = models.branches.find((b) => b === val) || null;
       },
+    });
+
+    const isApplyBtnDisabled = computed(() => {
+      let disabled = false;
+
+      if (isBranchInputDisabled.value) {
+        disabled = true;
+      }
+
+      if (filterModel.branch == null || filterModel.branch == '') {
+        disabled = true;
+      }
+
+      if (!filterModel.dateRange.length || !filterModel.dataTypes.length) {
+        disabled = true;
+      }
+
+      return disabled;
     });
 
     const searchRepo = debounce((queryString: string) => {
@@ -179,8 +205,10 @@ export default defineComponent({
       githubUrlRegexp,
       filterModel,
       // computed ->
+      isApplyBtnDisabled,
       getCurrentBranch,
       isBranchInputDisabled,
+      // methods ->
       handleUrlInputChange,
       getBrancesList,
       handleBranchInputChange,
@@ -221,6 +249,12 @@ label {
   flex-direction: row;
 }
 
+.submit-btn:disabled {
+  opacity: 0.6;
+}
+.submit-btn:not(:disabled) {
+  background: #42b983;
+}
 @media screen and (max-width: 768px) {
   .flex-row {
     flex-direction: column;

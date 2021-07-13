@@ -3,7 +3,7 @@ import axios from 'axios';
 import parseLinkHeader, { Links } from 'parse-link-header';
 import { request } from '@/tools/api';
 
-import { Branch, Contributor, RepositoryItem } from '@/types/repos';
+import { Branch, Contributor, PrsSearchItem, PullRequest, RepositoryItem } from '@/types/repos';
 const resource = 'https://api.github.com';
 const headers = {
   accept: 'application/vnd.github.v3+json',
@@ -110,15 +110,26 @@ export const fetchCommits = limiter.wrap(async function (
     });
 });
 
-export const fetchPulls = limiter.wrap(async function (owner: string, repo: string, params: {
 
-}) {
+type FetchPullsParams = {
+  per_page?: number;
+  page?: number;
+  base?: string;
+}
+export const fetchPulls = limiter.wrap(async function (
+  owner: string,
+  repo: string,
+  pagination: FetchPullsParams = {
+    per_page: 20,
+    page: 1,
+  },
+) {
   return await axios
     .request<PullRequest[]>({
       url: `/repos/${owner}/${repo}/pulls`,
       method: 'get',
       params: {
-        ...params,
+        ...pagination,
       },
     })
     .then((res) => {
@@ -129,7 +140,26 @@ export const fetchPulls = limiter.wrap(async function (owner: string, repo: stri
         links,
       };
     });
+});
 
+export interface PrsSearchResponse {
+  total_count: number;
+  incomplete_results: boolean;
+  items: PrsSearchItem[];
+}
+
+export const searchForIssuesAndPr = limiter.wrap(async function (
+  owner: string,
+  repo: string,
+  q: string,
+) {
+  return await request<PrsSearchResponse>({
+    url: `/search/issues?q=repo:${owner}/${repo} ${q}`,
+    method: 'get',
+  }).then((res) => {
+    console.log('res');
+    return res;
+  });
 });
 
 export default {
@@ -138,4 +168,5 @@ export default {
   fetchRepoBranches,
   fetchContributors,
   fetchCommits,
+  searchForIssuesAndPr,
 };
