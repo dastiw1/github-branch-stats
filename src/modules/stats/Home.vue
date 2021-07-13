@@ -1,45 +1,49 @@
 <template>
   <loader v-if="isLoading" />
-  <keep-alive v-else>
-    <div class="home">
-      <div class="container">
-        <h1 class="title">Главная</h1>
-      </div>
 
+  <div class="home" v-else>
+    <div class="container">
+      <h1 class="title">Главная</h1>
+    </div>
+    <keep-alive>
       <stats-filters ref="filters" @change="getData" />
+    </keep-alive>
 
-      <div class="container">
-        <div class="row">
-          <div class="pr-stats">
-            <dl>
-              <dt>Количество открытых pull requests (PR)</dt>
-              <dd>{{ openPrsCount }}</dd>
-              <dt>Количество закрытых pull requests (PR)</dt>
-              <dd>{{ closedPrsCount }}</dd>
-              <dt>Количество “старых” PR</dt>
-              <dd>{{ longRunningPrsCount }}</dd>
-            </dl>
-          </div>
+    <div class="container">
+      <div class="row">
+        <div class="pr-stats">
+          <dl>
+            <dt>Количество открытых pull requests (PR)</dt>
+            <dd>{{ openPrsCount }}</dd>
+            <dt>Количество закрытых pull requests (PR)</dt>
+            <dd>{{ closedPrsCount }}</dd>
+            <dt>Количество “старых” PR</dt>
+            <dd>{{ longRunningPrsCount }}</dd>
+          </dl>
         </div>
-        <div class="row" v-if="activeContributers.length">
-          <h1 class="title">Активные пользователи</h1>
+      </div>
+      <div class="row" v-if="activeContributers.length">
+        <h1 class="title">Активные пользователи</h1>
+        <keep-alive>
           <stats-data-grid :users="activeContributers" :headers="gridHeaders.users">
             <template v-slot:[`item.avatarUrl`]="{ item }">
               <img class="ava-img" :src="item.avatarUrl" alt="Avatar" />
             </template>
           </stats-data-grid>
-        </div>
-        <div class="row" v-if="passiveContributers.length">
-          <h1 class="title">Пассивные пользователи</h1>
+        </keep-alive>
+      </div>
+      <div class="row" v-if="passiveContributers.length">
+        <h1 class="title">Пассивные пользователи</h1>
+        <keep-alive>
           <stats-data-grid :users="passiveContributers" :headers="gridHeaders.users">
             <template v-slot:[`item.avatarUrl`]="{ item }">
               <img class="ava-img" :src="item.avatarUrl" alt="Avatar" />
             </template>
           </stats-data-grid>
-        </div>
+        </keep-alive>
       </div>
     </div>
-  </keep-alive>
+  </div>
 </template>
 
 <script lang="ts">
@@ -52,12 +56,11 @@ import {
   computed,
   ref,
 } from '@vue/composition-api';
-import LS from '@/tools/localstorage';
 
 import StatsFilters from './components/StatsFilters.vue';
 import { DataType } from '@/modules/stats/types';
 import GithubRepository from '@/repositories/GithubRepository';
-import { Contributor } from '@/types/repos';
+import { Contributor, User } from '@/types/repos';
 import StatsDataGrid from '@/modules/stats/components/StatsDataGrid.vue';
 import Loader from '../global/components/Loader.vue';
 
@@ -74,8 +77,14 @@ type ContributorItem = {
   id: number;
   avatarUrl: string;
   commitsCount: number;
-  prCount: number;
 };
+
+function dateStringToUTCTimestamp(dateString: string): number {
+  const date = new Date(dateString);
+  const tzOffset = date.getTimezoneOffset();
+  const utcDate = date.getTime() / 1000 - tzOffset * 60;
+  return utcDate;
+}
 export default defineComponent({
   components: { StatsFilters, StatsDataGrid, Loader },
   setup(_, { refs }) {
@@ -121,27 +130,41 @@ export default defineComponent({
     });
 
     async function getAllContributers(params: ExtendedStatsFilterParams) {
-      let page = 1;
       list.contributors = [];
-      let res: Contributor[] | null = null;
-      const limit = 100;
 
-      while (!res || res.length == limit) {
-        res = await GithubRepository.fetchContributors(params.owner, params.repo, {
-          per_page: limit,
-          page,
+      const sinceTimestamp = dateStringToUTCTimestamp(params.dateRange[0]);
+      const untilTimestamp = dateStringToUTCTimestamp(params.dateRange[1]);
+
+      const weekIndexes: number[] = [];
+      const data = await GithubRepository.getContributorsCommitActivity(params.owner, params.repo);
+
+      if (data.length) {
+        const addedUsers: Set<number> = new Set();
+        data[0].weeks.forEach((week, index) => {
+          if (week.w > sinceTimestamp && week.w < untilTimestamp) {
+            weekIndexes.push(index);
+          }
         });
-        list.contributors.push(
-          ...res.map((c) => ({
-            login: c.login.replace(/\[.+\]/gim, ''),
-            id: c.id,
-            avatarUrl: c.avatar_url,
-            commitsCount: 0,
-            prCount: 0,
-          })),
-        );
-        page++;
+
+        data.forEach((item) => {
+          weekIndexes.forEach((index) => {
+            if (addedUsers.has(item.author.id)) {
+              return true;
+            }
+            if (item.weeks[index].c > 0) {
+              list.contributors.push({
+                login: item.author.login,
+                id: item.author.id,
+                avatarUrl: item.author.avatar_url,
+                commitsCount: 0,
+              });
+              addedUsers.add(item.author.id);
+              return false;
+            }
+          });
+        });
       }
+      console.log(data);
 
       Promise.resolve(list.contributors);
     }

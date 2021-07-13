@@ -3,7 +3,14 @@ import axios from 'axios';
 import parseLinkHeader, { Links } from 'parse-link-header';
 import { request } from '@/tools/api';
 
-import { Branch, Contributor, PrsSearchItem, PullRequest, RepositoryItem } from '@/types/repos';
+import {
+  Branch,
+  Contributor,
+  ContributorsCommitStatsItem,
+  PrsSearchItem,
+  PullRequest,
+  RepositoryItem,
+} from '@/types/repos';
 const resource = 'https://api.github.com';
 const headers = {
   accept: 'application/vnd.github.v3+json',
@@ -11,7 +18,7 @@ const headers = {
 
 const limiter = new Bottleneck({
   maxConcurrent: 1,
-  minTime: 100,
+  minTime: 1000 / 60,
 });
 
 export async function user() {
@@ -110,12 +117,11 @@ export const fetchCommits = limiter.wrap(async function (
     });
 });
 
-
 type FetchPullsParams = {
   per_page?: number;
   page?: number;
   base?: string;
-}
+};
 export const fetchPulls = limiter.wrap(async function (
   owner: string,
   repo: string,
@@ -162,6 +168,16 @@ export const searchForIssuesAndPr = limiter.wrap(async function (
   });
 });
 
+export type ContributorsCommitStatsResponse = ContributorsCommitStatsItem[];
+
+export async function getContributorsCommitActivity(owner: string, repo: string) {
+  return await request<ContributorsCommitStatsResponse>({
+    url: `/repos/${owner}/${repo}/stats/contributors`,
+    method: 'get',
+    headers,
+  });
+}
+
 export default {
   user,
   searchRepositories,
@@ -169,4 +185,5 @@ export default {
   fetchContributors,
   fetchCommits,
   searchForIssuesAndPr,
+  getContributorsCommitActivity,
 };
