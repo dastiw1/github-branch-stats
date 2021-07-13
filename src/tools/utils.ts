@@ -76,3 +76,23 @@ export function getPropertyFromItem(
 export function removeHost(val: string, host = process.env.VUE_APP_BACKEND) {
   return val.replace(host + '/', '');
 }
+
+export function dateStringToUTCTimestamp(dateString: string): number {
+  const date = new Date(dateString);
+  const tzOffset = date.getTimezoneOffset();
+  const utcDate = date.getTime() / 1000 - tzOffset * 60;
+  return utcDate;
+}
+
+
+/**
+ * Показывает сколько времени прошло (в днях)
+ * @param dateString 
+ * @returns 
+ */
+export function daysPassed(dateString: string | Date) {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffInTime = now.getTime() - date.getTime();
+  return Math.round(diffInTime / (1000 * 3600 * 24));
+}

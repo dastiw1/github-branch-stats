@@ -21,13 +21,10 @@ export default defineComponent({
           code: code as string,
         })
           .then((res) => {
-            console.log('res', res, res.access_token);
-            
             LS.set(GLOBAL_CONST.AUTH_TOKEN, res.access_token);
             router.push('/');
           })
           .catch((err) => {
-            console.log(err);
             alert(`Ошибка при получении токена авторизации. Причина: ${err.message}`);
           });
       } else {

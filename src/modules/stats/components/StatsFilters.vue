@@ -24,12 +24,7 @@
       <div class="form-control">
         <label for="">Ветка</label>
         <select v-model="getCurrentBranch" :disabled="isBranchInputDisabled">
-          <option
-            v-for="(b, key) in branches"
-            :key="key"
-            :value="b"
-            @click="handleBranchInputChange(b)"
-          >
+          <option v-for="(b, key) in branches" :key="key" :value="b" @click="handleBranchInputChange(b)">
             {{ b }}
           </option>
         </select>
@@ -37,12 +32,7 @@
 
       <div class="form-control">
         <label for="">Период</label>
-        <date-picker
-          v-model="filterModel.dateRange"
-          value-type="format"
-          format="YYYY-MM-DDTHH:MM:SSZ"
-          range
-        ></date-picker>
+        <date-picker v-model="filterModel.dateRange" value-type="format" format="YYYY-MM-DD" range></date-picker>
       </div>
     </div>
     <div class="flex-row">
@@ -56,12 +46,7 @@
       </div>
     </div>
     <div class="flex-row">
-      <button
-        class="btn submit-btn"
-        type="button"
-        :disabled="isApplyBtnDisabled"
-        @click="applyFilters"
-      >
+      <button class="btn submit-btn" type="button" :disabled="isApplyBtnDisabled" @click="applyFilters">
         Применить
       </button>
     </div>
@@ -69,14 +54,7 @@
 </template>
 
 <script lang="ts">
-import {
-  computed,
-  defineComponent,
-  reactive,
-  toRefs,
-  watch,
-  WritableComputedRef,
-} from '@vue/composition-api';
+import { computed, defineComponent, reactive, toRefs, watch, WritableComputedRef } from '@vue/composition-api';
 import debounce from 'lodash/debounce';
 import DatePicker from 'vue2-datepicker';
 import 'vue2-datepicker/index.css';
@@ -161,13 +139,11 @@ export default defineComponent({
     const getBrancesList = debounce((url: string) => {
       const [owner, repo]: string[] = url.split('/');
       githubAPI.fetchRepoBranches(owner, repo).then((data) => {
-        console.log('branches', data);
         models.branches = data.map((b) => b.name);
       });
     }, 800);
 
     function handleUrlInputChange(val: string) {
-      console.log(isValidUrl(val));
       if (isValidUrl(val)) {
         getBrancesList(val);
       } else {
@@ -225,7 +201,7 @@ label {
   margin-bottom: 8px;
 }
 .form-control {
-  margin: 8px;
+  margin: 8px 0;
   text-align: left;
   display: flex;
   flex-direction: column;
@@ -233,9 +209,6 @@ label {
   > input,
   select {
     min-width: 186px;
-  }
-  + .form-control {
-    margin-left: 12px;
   }
 }
 .repo-item {
@@ -254,6 +227,14 @@ label {
 }
 .submit-btn:not(:disabled) {
   background: #42b983;
+}
+
+@media screen and (min-width: 768px) {
+  .form-control {
+    + .form-control {
+      margin-left: 16px;
+    }
+  }
 }
 @media screen and (max-width: 768px) {
   .flex-row {

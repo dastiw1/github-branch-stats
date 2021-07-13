@@ -259,3 +259,49 @@ export interface Week {
   d: number;
   c: number;
 }
+
+// Commits
+export interface Commit {
+  author: CommitAuthor;
+  committer: CommitAuthor;
+  message: string;
+  tree: Tree;
+  url: string;
+  comment_count: number;
+  verification: Verification;
+}
+
+export interface CommitAuthor {
+  name: string;
+  email: string;
+  date: Date;
+}
+
+export interface CommitAuthor {
+  name: string;
+  email: string;
+  date: Date;
+}
+
+export interface Tree {
+  sha: string;
+  url: string;
+}
+
+export interface Verification {
+  verified: boolean;
+  reason: Reason;
+  signature: null | string;
+  payload: null | string;
+}
+
+export enum Reason {
+  Unsigned = 'unsigned',
+  Valid = 'valid',
+}
+
+export interface CommitParent {
+  sha: string;
+  url: string;
+  html_url: string;
+}

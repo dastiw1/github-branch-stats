@@ -9,6 +9,14 @@ export type StatsFilterParams = {
   dataTypes: DataType[];
 };
 
+export type ExtendedStatsFilterParams = {
+  owner: string;
+  repo: string;
+  branch: string;
+  dateRange: string[];
+  dataTypes: DataType[];
+};
+
 export type DataTypeItem = {
   text: string;
   value: DataType;

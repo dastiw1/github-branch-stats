@@ -5,12 +5,15 @@ import { request } from '@/tools/api';
 
 import {
   Branch,
+  Commit,
+  CommitParent,
   Contributor,
   ContributorsCommitStatsItem,
   ExtendedPullRequest,
   PrsSearchItem,
   PullRequest,
   RepositoryItem,
+  User,
 } from '@/types/repos';
 const resource = 'https://api.github.com';
 const headers = {
@@ -95,13 +98,25 @@ interface GithubHeaderLinks {
   [rel: string]: GithubHeaderLink;
 }
 
+export interface CommitsResponseItem {
+  sha: string;
+  node_id: string;
+  commit: Commit;
+  url: string;
+  html_url: string;
+  comments_url: string;
+  author: User;
+  committer: User;
+  parents: CommitParent[];
+}
+
 export const fetchCommits = limiter.wrap(async function (
   owner: string,
   repo: string,
   params: FetchCommitsParams,
 ) {
   return await axios
-    .request<Contributor[]>({
+    .request<CommitsResponseItem[]>({
       url: `/repos/${owner}/${repo}/commits`,
       method: 'get',
       params: {
@@ -158,11 +173,16 @@ export const searchForIssuesAndPr = limiter.wrap(async function (
   owner: string,
   repo: string,
   q: string,
+  params: {
+    per_page: number;
+    page: number;
+  } = { per_page: 25, page: 1 },
 ) {
   return await request<PrsSearchResponse>({
     url: `/search/issues?q=repo:${owner}/${repo} ${q}`,
     method: 'get',
-  })
+    params,
+  });
 });
 
 export type ContributorsCommitStatsResponse = ContributorsCommitStatsItem[];

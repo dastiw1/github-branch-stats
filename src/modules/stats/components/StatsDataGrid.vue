@@ -1,26 +1,28 @@
-<template functional>
-  <div class="users-list">
-    <div class="user-item">
-      <div class="user-prop" v-for="header in Object.values(props.headers)" :key="header">
+<template>
+  <div class="items-list">
+    <div class="item-item">
+      <div class="item-prop" v-for="header in Object.values(headers)" :key="header">
         {{ header }}
       </div>
     </div>
 
-    <div class="user-item" v-for="user in props.users" :key="user.id">
-      <div class="user-prop" v-for="field in Object.keys(props.headers)" :key="field">
-        <slot :name="`item.${field}`" :item="user" :field="field">
-          {{ user[field] }}
+    <div class="item-item" v-for="item in items" :key="item.id">
+      <div class="item-prop" v-for="field in Object.keys(headers)" :key="field">
+        <slot :name="`item.${field}`" :item="item" :field="field">
+          {{ getPropertyFromItem(item, field, '-') }}
         </slot>
       </div>
     </div>
   </div>
 </template>
 
-<script lang="js">
+<script>
+import { getPropertyFromItem } from '@/tools/utils';
+
 export default {
   name: 'StatsDataGrid',
   props: {
-    users: {
+    items: {
       type: Array,
       required: true,
     },
@@ -29,24 +31,27 @@ export default {
       default: () => ({}),
     },
   },
+  methods: {
+    getPropertyFromItem,
+  },
 };
 </script>
 
 <style lang="scss" scoped>
-.users-list {
+.items-list {
   display: flex;
   flex-direction: column;
 }
-.user-item {
+.item-item {
   display: flex;
   flex-direction: row;
   min-width: 100%;
   flex: 1;
   &:nth-child(odd) {
-    background-color: rgb(241 241 241 / 74%);
+    background-color: rgba(241, 241, 241, 0.74);
   }
 }
-.user-prop {
+.item-prop {
   font-size: 14px;
   padding: 16px;
   width: 25%;

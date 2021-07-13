@@ -115,7 +115,6 @@ axios.interceptors.response.use(
     if (response?.data?.error) {
       return Promise.reject(handleError(response.data as APIResponseError));
     }
-    console.log('test', response);
     return Promise.resolve(response);
   },
   async (error) => {

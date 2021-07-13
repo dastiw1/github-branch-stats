@@ -1,41 +1,54 @@
 <template>
-  <loader v-if="isLoading" />
-
-  <div class="home" v-else>
+  <div class="home">
     <div class="container">
       <h1 class="title">Главная</h1>
     </div>
     <keep-alive>
       <stats-filters ref="filters" @change="getData" />
     </keep-alive>
-
-    <div class="container">
+    <loader v-if="isLoading" />
+    <div class="container" v-else>
       <div class="row">
         <div class="pr-stats">
-          <dl>
+          <simple-accordion :rows="accordionRows">
+            <template v-slot:term="{ row }"> {{ row.term }}: {{ row.details.count }} </template>
+            <template v-slot:details="{ row }">
+              <stats-data-grid :items="row.details.data" :headers="row.details.headers">
+                <template v-slot:[`item.title`]="{ item }">
+                  <a :href="item.html_url" target="_blank">{{ item.title }}</a>
+                </template>
+                <template v-slot:[`item.days`]="{ item }">
+                  {{ daysPassed(item.created_at) }}
+                </template>
+              </stats-data-grid>
+            </template>
+          </simple-accordion>
+          <!-- <dl>
             <dt>Количество открытых pull requests (PR)</dt>
             <dd>{{ openPrsCount }}</dd>
             <dt>Количество закрытых pull requests (PR)</dt>
             <dd>{{ closedPrsCount }}</dd>
             <dt>Количество “старых” PR</dt>
             <dd>{{ longRunningPrsCount }}</dd>
-          </dl>
+          </dl> -->
         </div>
       </div>
-      <div class="row" v-if="activeContributers.length">
+
+      <div class="row" v-if="params.dataTypes.includes('active')">
         <h1 class="title">Активные пользователи</h1>
         <keep-alive>
-          <stats-data-grid :users="activeContributers" :headers="gridHeaders.users">
+          <stats-data-grid :items="activeContributers" :headers="gridHeaders.users">
             <template v-slot:[`item.avatarUrl`]="{ item }">
               <img class="ava-img" :src="item.avatarUrl" alt="Avatar" />
             </template>
           </stats-data-grid>
         </keep-alive>
       </div>
-      <div class="row" v-if="passiveContributers.length">
+
+      <div class="row" v-if="params.dataTypes.includes('passive')">
         <h1 class="title">Пассивные пользователи</h1>
         <keep-alive>
-          <stats-data-grid :users="passiveContributers" :headers="gridHeaders.users">
+          <stats-data-grid :items="passiveContributers" :headers="gridHeaders.users">
             <template v-slot:[`item.avatarUrl`]="{ item }">
               <img class="ava-img" :src="item.avatarUrl" alt="Avatar" />
             </template>
@@ -47,48 +60,49 @@
 </template>
 
 <script lang="ts">
-import {
-  defineComponent,
-  onMounted,
-  reactive,
-  toRefs,
-  set,
-  computed,
-  ref,
-} from '@vue/composition-api';
+import { computed, defineComponent, onMounted, reactive, ref, toRefs } from '@vue/composition-api';
 
 import StatsFilters from './components/StatsFilters.vue';
-import { DataType } from '@/modules/stats/types';
-import GithubRepository from '@/repositories/GithubRepository';
-import { Contributor, PullRequest, User } from '@/types/repos';
+import { ExtendedStatsFilterParams } from '@/modules/stats/types';
 import StatsDataGrid from '@/modules/stats/components/StatsDataGrid.vue';
+import { useContributorStats } from '@/modules/stats/composobles/contributorStats';
+import { useRepositoryStats } from '@/modules/stats/composobles/repositoryStats';
 import Loader from '../global/components/Loader.vue';
-
-export type ExtendedStatsFilterParams = {
-  owner: string;
-  repo: string;
-  branch: string;
-  dateRange: string[];
-  dataTypes: DataType[];
+import SimpleAccordion from './components/SimpleAccordion.vue';
+import { daysPassed } from '@/tools/utils';
+type AccordionRow = {
+  term: string;
+  details?: any;
 };
-
-type ContributorItem = {
-  login: string;
-  id: number;
-  avatarUrl: string;
-  commitsCount: number;
-};
-
-function dateStringToUTCTimestamp(dateString: string): number {
-  const date = new Date(dateString);
-  const tzOffset = date.getTimezoneOffset();
-  const utcDate = date.getTime() / 1000 - tzOffset * 60;
-  return utcDate;
-}
 export default defineComponent({
-  components: { StatsFilters, StatsDataGrid, Loader },
+  name: 'Home',
+  components: { StatsFilters, StatsDataGrid, Loader, SimpleAccordion },
   setup(_, { refs }) {
-    const perPage = ref(30);
+    const { activeContributers, passiveContributers, getCommitsList } = useContributorStats();
+
+    const {
+      longRunningPrs,
+      openPrs,
+      closededPrs,
+      openPrsCount,
+      closedPrsCount,
+      longRunningPrsCount,
+      getOpenPrsCount,
+      getClosePrsCount,
+      getLongRunningPrs,
+    } = useRepositoryStats();
+
+    const model: {
+      params: ExtendedStatsFilterParams;
+    } = reactive({
+      params: {
+        owner: '',
+        repo: '',
+        branch: '',
+        dateRange: [],
+        dataTypes: [],
+      },
+    });
 
     const gridHeaders = {
       users: {
@@ -96,180 +110,61 @@ export default defineComponent({
         login: 'Логин',
         commitsCount: 'Кол-во коммитов',
       },
-      prs: {},
     };
-
-    const list = reactive<{
-      contributors: ContributorItem[];
-    }>({
-      contributors: [],
-    });
-
-    const totals = reactive({
-      openPrsCount: 0,
-      closedPrsCount: 0,
-      longRunningPrsCount: 0,
-    });
 
     const isLoading = ref(false);
 
-    const activeContributers = computed(() => {
-      const items = [...list.contributors].sort((a, b) => {
-        return b.commitsCount - a.commitsCount;
-      });
+    const accordionRows = computed<AccordionRow[]>(() => {
+      return [
+        {
+          term: 'Количество открытых pull requests (PR)',
 
-      return items.length > perPage.value ? items.slice(0, perPage.value) : items;
+          details: {
+            count: openPrsCount.value,
+            headers: {
+              title: 'Название PR',
+              created_at: 'Дата открытия',
+              'user.login': 'Логин автора',
+            },
+            data: openPrs.value,
+          },
+        },
+        {
+          term: 'Количество закрытых pull requests (PR)',
+
+          details: {
+            headers: {
+              title: 'Название PR',
+              created_at: 'Дата открытия',
+              'user.login': 'Логин автора',
+            },
+            count: closedPrsCount.value,
+            data: closededPrs.value,
+          },
+        },
+        {
+          term: 'Количество “старых” PR',
+
+          details: {
+            count: longRunningPrsCount.value,
+            headers: {
+              title: 'Название PR',
+              created_at: 'Дата открытия',
+              'user.login': 'Логин автора',
+              days: 'Дней прошло',
+            },
+            data: longRunningPrs.value,
+          },
+        },
+      ];
     });
-
-    const passiveContributers = computed(() => {
-      const items = [...list.contributors].sort((a, b) => {
-        return a.commitsCount - b.commitsCount;
-      });
-
-      return items.length > perPage.value ? items.slice(0, perPage.value) : items;
-    });
-
-    async function getAllContributers(params: ExtendedStatsFilterParams) {
-      list.contributors = [];
-
-      const sinceTimestamp = dateStringToUTCTimestamp(params.dateRange[0]);
-      const untilTimestamp = dateStringToUTCTimestamp(params.dateRange[1]);
-
-      const weekIndexes: number[] = [];
-      const data = await GithubRepository.getContributorsCommitActivity(params.owner, params.repo);
-
-      if (data.length) {
-        const addedUsers: Set<number> = new Set();
-        data[0].weeks.forEach((week, index) => {
-          if (week.w > sinceTimestamp && week.w < untilTimestamp) {
-            weekIndexes.push(index);
-          }
-        });
-
-        data.forEach((item) => {
-          weekIndexes.forEach((index) => {
-            if (addedUsers.has(item.author.id)) {
-              return true;
-            }
-            if (item.weeks[index].c > 0) {
-              list.contributors.push({
-                login: item.author.login,
-                id: item.author.id,
-                avatarUrl: item.author.avatar_url,
-                commitsCount: 0,
-              });
-              addedUsers.add(item.author.id);
-              return false;
-            }
-          });
-        });
-      }
-      console.log(data);
-
-      Promise.resolve(list.contributors);
-    }
-
-    async function getCommitsCount(params: ExtendedStatsFilterParams & { author: string }) {
-      const paginationParams = {
-        page: 1,
-        per_page: 1,
-        sha: params.branch,
-        author: params.author,
-        since: params.dateRange[0],
-        until: params.dateRange[1],
-      };
-      let count = 0;
-      const res = await GithubRepository.fetchCommits(params.owner, params.repo, paginationParams);
-      console.log('commits res', res);
-      if (res.links?.last?.page) {
-        count = parseInt(res.links.last.page);
-      }
-
-      return {
-        count,
-      };
-    }
-
-    async function getOpenPrsCount(params: ExtendedStatsFilterParams) {
-      const res = await GithubRepository.searchForIssuesAndPr(
-        params.owner,
-        params.repo,
-        `is:open base:${params.branch} created:${params.dateRange[0]}..${params.dateRange[1]}`,
-      );
-
-      totals.openPrsCount = res.total_count;
-    }
-    async function getClosePrsCount(params: ExtendedStatsFilterParams) {
-      const res = await GithubRepository.searchForIssuesAndPr(
-        params.owner,
-        params.repo,
-        `is:closed base:${params.branch} created: ${params.dateRange[0]}..${params.dateRange[1]}`,
-      );
-      totals.closedPrsCount = res.total_count;
-    }
-
-    async function getLongRunningPrs(params: ExtendedStatsFilterParams) {
-      const sinceTimestamp = dateStringToUTCTimestamp(params.dateRange[0]);
-      const untilTimestamp = dateStringToUTCTimestamp(params.dateRange[1]);
-
-      const perPage = 100;
-      let page = 1;
-      let pulls: PullRequest[] = [];
-      let totalLongRunningPullsCount = 0;
-
-      const paginationResponse = await GithubRepository.fetchPulls(params.owner, params.repo, {
-        per_page: 1,
-        page: 1,
-        base: params.branch,
-        sort: 'long-running',
-      });
-
-      if (paginationResponse.links.last?.page) {
-        totalLongRunningPullsCount = parseInt(paginationResponse.links.last?.page);
-        console.log(paginationResponse.links, totalLongRunningPullsCount)
-      }
-
-      const totalPages =
-        totalLongRunningPullsCount > perPage ? Math.ceil(totalLongRunningPullsCount / perPage) : 1;
-      console.log('total pages', totalPages)
-      while (page <= totalPages) {
-        const res = await GithubRepository.fetchPulls(params.owner, params.repo, {
-          per_page: perPage,
-          page,
-          base: params.branch,
-          sort: 'long-running',
-        });
-
-        res.data.forEach((pullReq) => {
-          const createdAtTimestamp = new Date(pullReq.created_at).getTime();
-
-          if (createdAtTimestamp > sinceTimestamp && createdAtTimestamp < untilTimestamp) {
-            pulls.push(pullReq);
-          }
-        });
-
-        page++;
-      }
-
-      totals.longRunningPrsCount = pulls.length;
-    }
 
     async function getData(params: ExtendedStatsFilterParams) {
-      //
+      model.params = params;
       console.log('params', params);
       isLoading.value = true;
-      await getAllContributers(params);
-      /* list.contributors.forEach(async (user, index) => {
-        const { count } = await getCommitsCount({ ...params, author: user.login });
-        set(list.contributors, index, {
-          ...user,
-          commitsCount: count,
-        });
-
-        if (index === list.contributors.length - 1) {
-          isLoading.value = false;
-        }
-      }); */
+      // TODO: Use Promise.all for parallele requests considering API rate limit
+      await getCommitsList(params);
 
       await getOpenPrsCount(params);
       await getClosePrsCount(params);
@@ -277,19 +172,21 @@ export default defineComponent({
 
       isLoading.value = false;
     }
-    onMounted(() => {
-      //
-    });
+
     return {
+      ...toRefs(model),
       gridHeaders,
       isLoading,
-      ...toRefs(list),
-      ...toRefs(totals),
+      openPrsCount,
+      closedPrsCount,
+      longRunningPrsCount,
       // computed ->
+      accordionRows,
       activeContributers,
       passiveContributers,
       // methods ->
       getData,
+      daysPassed,
     };
   },
 });

@@ -185,7 +185,7 @@ export default defineComponent({
   &.expaned {
     display: block;
     position: absolute;
-    box-shadow: 0 0 1px rgb(183 122 122 / 78%);
+    box-shadow: 0 0 1px rgba(183, 122, 122, .78);
   }
 
   &__list {
@@ -196,7 +196,7 @@ export default defineComponent({
       text-align-last: left;
       cursor: pointer;
       &:hover {
-        background: rgb(197 251 226 / 44%);
+        background: rgba(19, 251, 226, .44);
       }
     }
   }
