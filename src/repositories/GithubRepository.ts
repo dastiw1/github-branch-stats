@@ -7,6 +7,7 @@ import {
   Branch,
   Contributor,
   ContributorsCommitStatsItem,
+  ExtendedPullRequest,
   PrsSearchItem,
   PullRequest,
   RepositoryItem,
@@ -121,22 +122,21 @@ type FetchPullsParams = {
   per_page?: number;
   page?: number;
   base?: string;
+  sort?: 'created' | 'updated' | 'popularity ' | 'long-running';
 };
-export const fetchPulls = limiter.wrap(async function (
+export async function fetchPulls(
   owner: string,
   repo: string,
-  pagination: FetchPullsParams = {
+  params: FetchPullsParams = {
     per_page: 20,
     page: 1,
   },
 ) {
   return await axios
-    .request<PullRequest[]>({
+    .request<ExtendedPullRequest[]>({
       url: `/repos/${owner}/${repo}/pulls`,
       method: 'get',
-      params: {
-        ...pagination,
-      },
+      params,
     })
     .then((res) => {
       const links = parseLinkHeader(res.headers.link) as GithubHeaderLinks;
@@ -146,7 +146,7 @@ export const fetchPulls = limiter.wrap(async function (
         links,
       };
     });
-});
+}
 
 export interface PrsSearchResponse {
   total_count: number;
@@ -162,10 +162,7 @@ export const searchForIssuesAndPr = limiter.wrap(async function (
   return await request<PrsSearchResponse>({
     url: `/search/issues?q=repo:${owner}/${repo} ${q}`,
     method: 'get',
-  }).then((res) => {
-    console.log('res');
-    return res;
-  });
+  })
 });
 
 export type ContributorsCommitStatsResponse = ContributorsCommitStatsItem[];
@@ -183,6 +180,7 @@ export default {
   searchRepositories,
   fetchRepoBranches,
   fetchContributors,
+  fetchPulls,
   fetchCommits,
   searchForIssuesAndPr,
   getContributorsCommitActivity,

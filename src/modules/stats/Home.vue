@@ -60,7 +60,7 @@ import {
 import StatsFilters from './components/StatsFilters.vue';
 import { DataType } from '@/modules/stats/types';
 import GithubRepository from '@/repositories/GithubRepository';
-import { Contributor, User } from '@/types/repos';
+import { Contributor, PullRequest, User } from '@/types/repos';
 import StatsDataGrid from '@/modules/stats/components/StatsDataGrid.vue';
 import Loader from '../global/components/Loader.vue';
 
@@ -194,7 +194,7 @@ export default defineComponent({
       const res = await GithubRepository.searchForIssuesAndPr(
         params.owner,
         params.repo,
-        `is:open base:${params.branch} created: ${params.dateRange[0]}..${params.dateRange[1]}`,
+        `is:open base:${params.branch} created:${params.dateRange[0]}..${params.dateRange[1]}`,
       );
 
       totals.openPrsCount = res.total_count;
@@ -208,12 +208,58 @@ export default defineComponent({
       totals.closedPrsCount = res.total_count;
     }
 
+    async function getLongRunningPrs(params: ExtendedStatsFilterParams) {
+      const sinceTimestamp = dateStringToUTCTimestamp(params.dateRange[0]);
+      const untilTimestamp = dateStringToUTCTimestamp(params.dateRange[1]);
+
+      const perPage = 100;
+      let page = 1;
+      let pulls: PullRequest[] = [];
+      let totalLongRunningPullsCount = 0;
+
+      const paginationResponse = await GithubRepository.fetchPulls(params.owner, params.repo, {
+        per_page: 1,
+        page: 1,
+        base: params.branch,
+        sort: 'long-running',
+      });
+
+      if (paginationResponse.links.last?.page) {
+        totalLongRunningPullsCount = parseInt(paginationResponse.links.last?.page);
+        console.log(paginationResponse.links, totalLongRunningPullsCount)
+      }
+
+      const totalPages =
+        totalLongRunningPullsCount > perPage ? Math.ceil(totalLongRunningPullsCount / perPage) : 1;
+      console.log('total pages', totalPages)
+      while (page <= totalPages) {
+        const res = await GithubRepository.fetchPulls(params.owner, params.repo, {
+          per_page: perPage,
+          page,
+          base: params.branch,
+          sort: 'long-running',
+        });
+
+        res.data.forEach((pullReq) => {
+          const createdAtTimestamp = new Date(pullReq.created_at).getTime();
+
+          if (createdAtTimestamp > sinceTimestamp && createdAtTimestamp < untilTimestamp) {
+            pulls.push(pullReq);
+          }
+        });
+
+        page++;
+      }
+
+      totals.longRunningPrsCount = pulls.length;
+    }
+
     async function getData(params: ExtendedStatsFilterParams) {
       //
       console.log('params', params);
       isLoading.value = true;
       await getAllContributers(params);
-      list.contributors.forEach(async (user, index) => {
+      /* list.contributors.forEach(async (user, index) => {
         const { count } = await getCommitsCount({ ...params, author: user.login });
         set(list.contributors, index, {
           ...user,
@@ -223,10 +269,11 @@ export default defineComponent({
         if (index === list.contributors.length - 1) {
           isLoading.value = false;
         }
-      });
+      }); */
 
       await getOpenPrsCount(params);
       await getClosePrsCount(params);
+      await getLongRunningPrs(params);
 
       isLoading.value = false;
     }

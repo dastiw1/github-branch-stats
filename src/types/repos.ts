@@ -130,6 +130,64 @@ export interface PullRequest {
   patch_url: string;
 }
 
+export interface ExtendedPullRequest extends PullRequest {
+  id: number;
+  node_id: string;
+  issue_url: string;
+  number: number;
+  state: string;
+  locked: boolean;
+  title: string;
+  user: User;
+  body: string;
+  created_at: Date;
+  updated_at: Date;
+  closed_at: null;
+  merged_at: null;
+  merge_commit_sha: string;
+  assignee: null;
+  assignees: any[];
+  requested_reviewers: any[];
+  requested_teams: any[];
+  labels: any[];
+  milestone: null;
+  draft: boolean;
+  commits_url: string;
+  review_comments_url: string;
+  review_comment_url: string;
+  comments_url: string;
+  statuses_url: string;
+  head: CommitState;
+  base: CommitState;
+  _links: Links;
+  author_association: string;
+  auto_merge: null;
+  active_lock_reason: null;
+}
+
+export interface Links {
+  self: Comments;
+  html: Comments;
+  issue: Comments;
+  comments: Comments;
+  review_comments: Comments;
+  review_comment: Comments;
+  commits: Comments;
+  statuses: Comments;
+}
+
+export interface Comments {
+  href: string;
+}
+
+export interface CommitState {
+  label: string;
+  ref: string;
+  sha: string;
+  user: User;
+  repo: RepositoryItem;
+}
+
 export interface PrsSearchItem {
   url: string;
   repository_url: string;
