@@ -19,6 +19,7 @@
                 :page="
                   paginators[row.type].type === 'clientSide' ? paginators[row.type].page : null
                 "
+                :group-by="row.type === 'longRunning' ? 'user.login' : null"
               >
                 <template v-slot:[`item.title`]="{ item }">
                   <a :href="item.html_url" target="_blank">{{ item.title }}</a>
