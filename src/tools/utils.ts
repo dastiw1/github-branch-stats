@@ -81,13 +81,6 @@ export function removeHost(val: string, host = process.env.VUE_APP_BACKEND): str
   return val.replace(host + '/', '');
 }
 
-export function dateStringToUTCTimestamp(dateString: string): number {
-  const date = new Date(dateString);
-  const tzOffset = date.getTimezoneOffset();
-  const utcDate = date.getTime() / 1000 - tzOffset * 60;
-  return utcDate;
-}
-
 /**
  * Показывает сколько времени прошло (в днях)
  * @param dateString
@@ -98,4 +91,16 @@ export function daysPassed(dateString: string | Date): number {
   const date = new Date(dateString);
   const diffInTime = now.getTime() - date.getTime();
   return Math.round(diffInTime / (1000 * 3600 * 24));
+}
+
+export function formatDate(date: string | Date) {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  let month = '' + (d.getMonth() + 1);
+  let day = '' + d.getDate();
+
+  if (month.length < 2) month = '0' + month;
+  if (day.length < 2) day = '0' + day;
+
+  return [year, month, day].join('-');
 }

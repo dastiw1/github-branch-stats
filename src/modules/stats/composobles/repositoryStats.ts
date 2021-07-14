@@ -2,12 +2,9 @@ import GithubRepository from '@/repositories/GithubRepository';
 import { PrsSearchItem, PullRequest } from '@/types/repos';
 import { ref, reactive, toRefs } from '@vue/composition-api';
 import { ExtendedStatsFilterParams } from '../types';
-import { dateStringToUTCTimestamp, daysPassed } from '@/tools/utils';
+import { daysPassed, formatDate } from '@/tools/utils';
 
-function formatDateToDayDate(dateString: string) {
-  return dateString.substring(0, 10);
-}
-
+ 
 export function useRepositoryStats() {
   // total Counts
   const totals = reactive({
@@ -20,7 +17,7 @@ export function useRepositoryStats() {
   const state = reactive<{
     openPrs: PrsSearchItem[];
     closededPrs: PrsSearchItem[];
-    longRunningPrs: PullRequest[];
+    longRunningPrs: PrsSearchItem[];
   }>({
     openPrs: [],
     closededPrs: [],
@@ -32,8 +29,8 @@ export function useRepositoryStats() {
     pagination = { per_page: 25, page: 1 },
   ) {
     totals.openPrsCount = 0;
-    const sinceDay = formatDateToDayDate(params.dateRange[0]);
-    const untilDay = formatDateToDayDate(params.dateRange[1]);
+    const sinceDay = formatDate(params.dateRange[0]);
+    const untilDay = formatDate(params.dateRange[1]);
 
     const res = await GithubRepository.searchForIssuesAndPr(
       { owner: params.owner, repo: params.repo },
@@ -48,8 +45,8 @@ export function useRepositoryStats() {
     pagination = { per_page: 25, page: 1 },
   ) {
     totals.closedPrsCount = 0;
-    const sinceDay = formatDateToDayDate(params.dateRange[0]);
-    const untilDay = formatDateToDayDate(params.dateRange[1]);
+    const sinceDay = formatDate(params.dateRange[0]);
+    const untilDay = formatDate(params.dateRange[1]);
 
     const res = await GithubRepository.searchForIssuesAndPr(
       { owner: params.owner, repo: params.repo },
@@ -60,52 +57,41 @@ export function useRepositoryStats() {
     totals.closedPrsCount = res.total_count;
   }
 
-  async function getLongRunningPrs(params: ExtendedStatsFilterParams) {
+  async function getLongRunningPrs(
+    params: ExtendedStatsFilterParams,
+    pagination = { per_page: 25, page: 1 },
+  ) {
+    const sinceDay = formatDate(params.dateRange[0]);
+    const sinceDate = new Date(params.dateRange[0]);
+
+    const untilDate = new Date(params.dateRange[1]);
+    let untilDay = formatDate(params.dateRange[1]);
+
+    const thirtyDaysInMiliseconds = 30 * 24 * 60 * 60 * 1000;
+    const now  = new Date()
+    now.setUTCHours(0,0,0,0);
+    const oldPrsMaxDate = new Date(now.getTime() - thirtyDaysInMiliseconds);
+
     totals.longRunningPrsCount = 0;
-    const sinceTimestamp = dateStringToUTCTimestamp(params.dateRange[0]);
-    const untilTimestamp = dateStringToUTCTimestamp(params.dateRange[1]);
 
-    const perPage = 100;
-    let page = 1;
-    state.longRunningPrs = [];
-    let totalLongRunningPullsCount = 0;
-
-    const paginationResponse = await GithubRepository.fetchPulls(params.owner, params.repo, {
-      per_page: 1,
-      page: 1,
-      base: params.branch,
-      sort: 'long-running',
-    });
-
-    if (paginationResponse.links.last?.page) {
-      totalLongRunningPullsCount = parseInt(paginationResponse.links.last?.page);
+    if (sinceDate > oldPrsMaxDate) {
+      state.longRunningPrs = [];
+      return;
     }
 
-    const totalPages =
-      totalLongRunningPullsCount > perPage ? Math.ceil(totalLongRunningPullsCount / perPage) : 1;
-
-    while (page <= totalPages) {
-      const res = await GithubRepository.fetchPulls(params.owner, params.repo, {
-        per_page: perPage,
-        page,
-        base: params.branch,
-        sort: 'long-running',
-      });
-      res.data.forEach((pullReq) => {
-        const createdAtTimestamp = new Date(pullReq.created_at).getTime() / 1000;
-        if (
-          createdAtTimestamp > sinceTimestamp &&
-          createdAtTimestamp < untilTimestamp &&
-          daysPassed(pullReq.created_at) > 30
-        ) {
-          state.longRunningPrs.push(pullReq);
-        }
-      });
-
-      page++;
+    if(untilDate >= oldPrsMaxDate) {
+      untilDay = formatDate(oldPrsMaxDate.toISOString())
     }
+   
+    const res = await GithubRepository.searchForIssuesAndPr(
+      { owner: params.owner, repo: params.repo },
+      `is:pr is:open base:${params.branch} created:${sinceDay}..${untilDay}`,
+      pagination,
+    );
 
-    totals.longRunningPrsCount = state.longRunningPrs.length;
+    state.longRunningPrs = res.items;
+
+    totals.longRunningPrsCount = res.total_count;
   }
 
   return {

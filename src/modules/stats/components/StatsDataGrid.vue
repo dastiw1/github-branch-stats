@@ -77,7 +77,6 @@ export default {
       return has;
     },
     pageItems() {
-      console.log('recalc');
       if (this.page === null) {
         return this.items;
       }

@@ -133,7 +133,7 @@ export default defineComponent({
       },
       longRunning: {
         page: 1,
-        type: 'clientSide',
+        type: 'serverSide',
       },
     });
     const accordionRows = computed<AccordionRow[]>(() => {
