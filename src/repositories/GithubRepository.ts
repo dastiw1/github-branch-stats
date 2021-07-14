@@ -169,19 +169,19 @@ export interface PrsSearchResponse {
   items: PrsSearchItem[];
 }
 
+type PaginationParams = {
+  per_page: number;
+  page: number;
+};
 export const searchForIssuesAndPr = limiter.wrap(async function (
-  owner: string,
-  repo: string,
+  params: { owner: string; repo: string },
   q: string,
-  params: {
-    per_page: number;
-    page: number;
-  } = { per_page: 25, page: 1 },
+  pagination: PaginationParams,
 ) {
   return await request<PrsSearchResponse>({
-    url: `/search/issues?q=repo:${owner}/${repo} ${q}`,
+    url: `/search/issues?q=repo:${params.owner}/${params.repo} ${q}`,
     method: 'get',
-    params,
+    params: pagination,
   });
 });
 

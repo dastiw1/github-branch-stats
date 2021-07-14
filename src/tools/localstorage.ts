@@ -25,7 +25,7 @@ const LS = {
     } else if (typeof value !== 'string') {
       val = JSON.stringify(value);
     }
-    
+
     localStorage.setItem(key, val);
   },
   remove(key: string): void {

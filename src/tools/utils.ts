@@ -1,4 +1,4 @@
-export function getNestedValue(obj: any, path: (string | number)[], fallback: any = undefined) {
+export function getNestedValue(obj: any, path: (string | number)[], fallback: any = undefined) : any {
   const last = path.length - 1;
 
   if (last < 0) return obj === undefined ? fallback : obj;
@@ -73,7 +73,7 @@ export function getPropertyFromItem(
 /**
  * Remove host from github repo url
  */
-export function removeHost(val: string, host = process.env.VUE_APP_BACKEND) {
+export function removeHost(val: string, host = process.env.VUE_APP_BACKEND): string {
   return val.replace(host + '/', '');
 }
 
@@ -84,13 +84,12 @@ export function dateStringToUTCTimestamp(dateString: string): number {
   return utcDate;
 }
 
-
 /**
  * Показывает сколько времени прошло (в днях)
- * @param dateString 
- * @returns 
+ * @param dateString
+ * @returns
  */
-export function daysPassed(dateString: string | Date) {
+export function daysPassed(dateString: string | Date): number {
   const now = new Date();
   const date = new Date(dateString);
   const diffInTime = now.getTime() - date.getTime();

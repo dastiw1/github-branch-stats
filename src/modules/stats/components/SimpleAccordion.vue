@@ -5,6 +5,10 @@
         <slot name="term" :row="row">
           {{ row.term }}
         </slot>
+        <div
+          class="chevron"
+          :class="{ top: state.expandStates[idx], bottom: !state.expandStates[idx] }"
+        ></div>
       </dt>
       <dd v-if="state.expandStates[idx]">
         <slot name="details" :row="row">{{ row.details }}</slot>
@@ -36,22 +40,19 @@ export default defineComponent({
       expandStates: [],
     });
 
-    watch(
-      props,
-      (val) => {
-        //
-        state.expandStates = [];
-        val.rows.forEach((r, i) => {
-          state.expandStates[i] = false;
-        });
-      },
-      { deep: true, immediate: true }
-    );
-    function toggleState(idx: number) {
+    function resetStates() {
+      state.expandStates = [];
+      props.rows.forEach((r, i) => {
+        state.expandStates[i] = false;
+      });
+    }
+
+    function toggleState(idx: number): void {
       set(state.expandStates, idx, !state.expandStates[idx]);
     }
     return {
       state,
+      resetStates,
       toggleState,
     };
   },
@@ -64,21 +65,56 @@ export default defineComponent({
 }
 dl {
   margin: 0 0 1em;
-  
 
   dt {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
     background-color: #ccc;
     padding: 1em;
     font-weight: bold;
     cursor: pointer;
+    box-sizing: border-box;
   }
 
   dd {
+    display: flex;
+    flex-direction: column;
+
     padding: 0;
     margin: 0;
     border: 1px solid #ccc;
     border-top: 0;
-    padding: 1em;
+    box-sizing: border-box;
   }
+}
+
+.chevron::before {
+  border-style: solid;
+  border-width: 0.25em 0.25em 0 0;
+  content: '';
+  display: inline-block;
+  height: 0.45em;
+  left: 0.15em;
+  position: relative;
+  top: 0.15em;
+  transform: rotate(-45deg);
+  vertical-align: top;
+  width: 0.45em;
+}
+
+.chevron.right:before {
+  left: 0;
+  transform: rotate(45deg);
+}
+
+.chevron.bottom:before {
+  top: 0;
+  transform: rotate(135deg);
+}
+
+.chevron.left:before {
+  left: 0.25em;
+  transform: rotate(-135deg);
 }
 </style>

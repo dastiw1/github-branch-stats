@@ -27,28 +27,34 @@ export function useRepositoryStats() {
     longRunningPrs: [],
   });
 
-  async function getOpenPrsCount(params: ExtendedStatsFilterParams) {
+  async function getOpenPrsCount(
+    params: ExtendedStatsFilterParams,
+    pagination = { per_page: 25, page: 1 },
+  ) {
     totals.openPrsCount = 0;
     const sinceDay = formatDateToDayDate(params.dateRange[0]);
     const untilDay = formatDateToDayDate(params.dateRange[1]);
 
     const res = await GithubRepository.searchForIssuesAndPr(
-      params.owner,
-      params.repo,
+      { owner: params.owner, repo: params.repo },
       `is:pr is:open base:${params.branch} created:${sinceDay}..${untilDay}`,
+      pagination,
     );
     state.openPrs = res.items;
     totals.openPrsCount = res.total_count;
   }
-  async function getClosePrsCount(params: ExtendedStatsFilterParams) {
+  async function getClosePrsCount(
+    params: ExtendedStatsFilterParams,
+    pagination = { per_page: 25, page: 1 },
+  ) {
     totals.closedPrsCount = 0;
     const sinceDay = formatDateToDayDate(params.dateRange[0]);
     const untilDay = formatDateToDayDate(params.dateRange[1]);
 
     const res = await GithubRepository.searchForIssuesAndPr(
-      params.owner,
-      params.repo,
+      { owner: params.owner, repo: params.repo },
       `is:pr is:closed base:${params.branch} created:${sinceDay}..${untilDay}`,
+      pagination,
     );
     state.closededPrs = res.items;
     totals.closedPrsCount = res.total_count;
@@ -78,7 +84,6 @@ export function useRepositoryStats() {
     const totalPages =
       totalLongRunningPullsCount > perPage ? Math.ceil(totalLongRunningPullsCount / perPage) : 1;
 
-
     while (page <= totalPages) {
       const res = await GithubRepository.fetchPulls(params.owner, params.repo, {
         per_page: perPage,
@@ -88,7 +93,11 @@ export function useRepositoryStats() {
       });
       res.data.forEach((pullReq) => {
         const createdAtTimestamp = new Date(pullReq.created_at).getTime() / 1000;
-        if (createdAtTimestamp > sinceTimestamp && createdAtTimestamp < untilTimestamp && daysPassed(pullReq.created_at) > 30) {
+        if (
+          createdAtTimestamp > sinceTimestamp &&
+          createdAtTimestamp < untilTimestamp &&
+          daysPassed(pullReq.created_at) > 30
+        ) {
           state.longRunningPrs.push(pullReq);
         }
       });

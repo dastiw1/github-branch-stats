@@ -24,7 +24,12 @@
       <div class="form-control">
         <label for="">Ветка</label>
         <select v-model="getCurrentBranch" :disabled="isBranchInputDisabled">
-          <option v-for="(b, key) in branches" :key="key" :value="b" @click="handleBranchInputChange(b)">
+          <option
+            v-for="(b, key) in branches"
+            :key="key"
+            :value="b"
+            @click="handleBranchInputChange(b)"
+          >
             {{ b }}
           </option>
         </select>
@@ -32,10 +37,14 @@
 
       <div class="form-control">
         <label for="">Период</label>
-        <date-picker v-model="filterModel.dateRange" value-type="format" format="YYYY-MM-DD" range></date-picker>
+        <date-picker
+          v-model="filterModel.dateRange"
+          value-type="format"
+          format="YYYY-MM-DD"
+          :disabled-date="(date, currentValue) => date.getTime() > new Date().getTime()"
+          range
+        ></date-picker>
       </div>
-    </div>
-    <div class="flex-row">
       <div class="form-control">
         <label for="">Тип данных</label>
         <select multiple v-model="filterModel.dataTypes">
@@ -45,8 +54,14 @@
         </select>
       </div>
     </div>
+    
     <div class="flex-row">
-      <button class="btn submit-btn" type="button" :disabled="isApplyBtnDisabled" @click="applyFilters">
+      <button
+        class="btn submit-btn"
+        type="button"
+        :disabled="isApplyBtnDisabled"
+        @click="applyFilters"
+      >
         Применить
       </button>
     </div>
@@ -54,7 +69,14 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, reactive, toRefs, watch, WritableComputedRef } from '@vue/composition-api';
+import {
+  computed,
+  defineComponent,
+  reactive,
+  toRefs,
+  watch,
+  WritableComputedRef,
+} from '@vue/composition-api';
 import debounce from 'lodash/debounce';
 import DatePicker from 'vue2-datepicker';
 import 'vue2-datepicker/index.css';

@@ -6,7 +6,7 @@
 export default {};
 </script>
 
-<style scoped>
+<style>
 .loader,
 .loader:before,
 .loader:after {

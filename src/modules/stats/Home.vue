@@ -10,10 +10,16 @@
     <div class="container" v-else>
       <div class="row">
         <div class="pr-stats">
-          <simple-accordion :rows="accordionRows">
+          <simple-accordion :rows="accordionRows" ref="accordion">
             <template v-slot:term="{ row }"> {{ row.term }}: {{ row.details.count }} </template>
             <template v-slot:details="{ row }">
-              <stats-data-grid :items="row.details.data" :headers="row.details.headers">
+              <stats-data-grid
+                :items="row.details.data"
+                :headers="row.details.headers"
+                :page="
+                  paginators[row.type].type === 'clientSide' ? paginators[row.type].page : null
+                "
+              >
                 <template v-slot:[`item.title`]="{ item }">
                   <a :href="item.html_url" target="_blank">{{ item.title }}</a>
                 </template>
@@ -21,16 +27,13 @@
                   {{ daysPassed(item.created_at) }}
                 </template>
               </stats-data-grid>
+              <grid-pagination
+                :total="row.details.count"
+                :page.sync="paginators[row.type].page"
+                @update:page="paginate($event, row.type)"
+              ></grid-pagination>
             </template>
           </simple-accordion>
-          <!-- <dl>
-            <dt>Количество открытых pull requests (PR)</dt>
-            <dd>{{ openPrsCount }}</dd>
-            <dt>Количество закрытых pull requests (PR)</dt>
-            <dd>{{ closedPrsCount }}</dd>
-            <dt>Количество “старых” PR</dt>
-            <dd>{{ longRunningPrsCount }}</dd>
-          </dl> -->
         </div>
       </div>
 
@@ -60,7 +63,8 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, onMounted, reactive, ref, toRefs } from '@vue/composition-api';
+import Vue from 'vue';
+import { computed, defineComponent, reactive, ref, set, toRefs } from '@vue/composition-api';
 
 import StatsFilters from './components/StatsFilters.vue';
 import { ExtendedStatsFilterParams } from '@/modules/stats/types';
@@ -70,13 +74,17 @@ import { useRepositoryStats } from '@/modules/stats/composobles/repositoryStats'
 import Loader from '../global/components/Loader.vue';
 import SimpleAccordion from './components/SimpleAccordion.vue';
 import { daysPassed } from '@/tools/utils';
+import GridPagination from './components/GridPagination.vue';
 type AccordionRow = {
   term: string;
+  type: string;
   details?: any;
 };
+
+type PaginatorItemType = 'serverSide' | 'clientSide';
 export default defineComponent({
   name: 'Home',
-  components: { StatsFilters, StatsDataGrid, Loader, SimpleAccordion },
+  components: { StatsFilters, StatsDataGrid, Loader, SimpleAccordion, GridPagination },
   setup(_, { refs }) {
     const { activeContributers, passiveContributers, getCommitsList } = useContributorStats();
 
@@ -92,7 +100,7 @@ export default defineComponent({
       getLongRunningPrs,
     } = useRepositoryStats();
 
-    const model: {
+    const state: {
       params: ExtendedStatsFilterParams;
     } = reactive({
       params: {
@@ -113,12 +121,25 @@ export default defineComponent({
     };
 
     const isLoading = ref(false);
-
+    const paginators = reactive<Record<string, { page: number; type: PaginatorItemType }>>({
+      open: {
+        page: 1,
+        type: 'serverSide',
+      },
+      closed: {
+        page: 1,
+        type: 'serverSide',
+      },
+      longRunning: {
+        page: 1,
+        type: 'clientSide',
+      },
+    });
     const accordionRows = computed<AccordionRow[]>(() => {
       return [
         {
           term: 'Количество открытых pull requests (PR)',
-
+          type: 'open',
           details: {
             count: openPrsCount.value,
             headers: {
@@ -131,7 +152,7 @@ export default defineComponent({
         },
         {
           term: 'Количество закрытых pull requests (PR)',
-
+          type: 'closed',
           details: {
             headers: {
               title: 'Название PR',
@@ -144,7 +165,7 @@ export default defineComponent({
         },
         {
           term: 'Количество “старых” PR',
-
+          type: 'longRunning',
           details: {
             count: longRunningPrsCount.value,
             headers: {
@@ -158,11 +179,29 @@ export default defineComponent({
         },
       ];
     });
+    async function paginate(page: number, type: string) {
+      const paginator = paginators[type];
 
+      if (paginator.type === 'serverSide') {
+        switch (type) {
+          case 'open':
+            await getOpenPrsCount(state.params, { per_page: 25, page });
+
+            break;
+          case 'closed':
+            await getClosePrsCount(state.params, { per_page: 25, page });
+        }
+      }
+    }
     async function getData(params: ExtendedStatsFilterParams) {
-      model.params = params;
-      console.log('params', params);
+      (refs.accordion as Vue & { resetStates: () => void }).resetStates();
+
+      state.params = params;
+
       isLoading.value = true;
+      Object.keys(paginators).forEach((key: string) => {
+        set(paginators[key], 'page', 1);
+      });
       // TODO: Use Promise.all for parallele requests considering API rate limit
       await getCommitsList(params);
 
@@ -174,7 +213,8 @@ export default defineComponent({
     }
 
     return {
-      ...toRefs(model),
+      ...toRefs(state),
+      paginators,
       gridHeaders,
       isLoading,
       openPrsCount,
@@ -185,6 +225,7 @@ export default defineComponent({
       activeContributers,
       passiveContributers,
       // methods ->
+      paginate,
       getData,
       daysPassed,
     };

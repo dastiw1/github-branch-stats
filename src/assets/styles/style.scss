@@ -2,6 +2,9 @@
 @import './components/inputs';
 @import './components/list';
 
+main {
+  width: 100%;
+}
 .container {
   margin: 0 auto;
   padding-left: 16px;

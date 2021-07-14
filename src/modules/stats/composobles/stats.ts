@@ -1,9 +1,7 @@
 import { computed, reactive, toRefs } from '@vue/composition-api';
 
-export function stats () {
-
-
-    return {
-        //
-    }
+export function stats() {
+  return {
+    //
+  };
 }

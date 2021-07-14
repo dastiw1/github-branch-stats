@@ -6,7 +6,7 @@
       </div>
     </div>
 
-    <div class="item-item" v-for="item in items" :key="item.id">
+    <div class="item-item" v-for="item in pageItems" :key="item.id">
       <div class="item-prop" v-for="field in Object.keys(headers)" :key="field">
         <slot :name="`item.${field}`" :item="item" :field="field">
           {{ getPropertyFromItem(item, field, '-') }}
@@ -26,9 +26,27 @@ export default {
       type: Array,
       required: true,
     },
+    page: {
+      type: Number,
+      default: null,
+    },
+    perPage: {
+      type: Number,
+      default: 25,
+    },
     headers: {
       type: Object,
       default: () => ({}),
+    },
+  },
+  computed: {
+    pageItems() {
+      if (this.page === null) {
+        return this.items;
+      }
+      const start = this.perPage * (this.page - 1);
+      const end = this.perPage * this.page;
+      return this.items.slice(start, end);
     },
   },
   methods: {
@@ -56,5 +74,12 @@ export default {
   padding: 16px;
   width: 25%;
   text-align: left;
+  word-break: break-word;
+}
+
+@media screen and (max-width: 768px) {
+  .item-prop {
+    padding: 8px;
+  }
 }
 </style>
