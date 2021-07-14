@@ -4,7 +4,6 @@ import { ref, reactive, toRefs } from '@vue/composition-api';
 import { ExtendedStatsFilterParams } from '../types';
 import { daysPassed, formatDate } from '@/tools/utils';
 
- 
 export function useRepositoryStats() {
   // total Counts
   const totals = reactive({
@@ -68,8 +67,8 @@ export function useRepositoryStats() {
     let untilDay = formatDate(params.dateRange[1]);
 
     const thirtyDaysInMiliseconds = 30 * 24 * 60 * 60 * 1000;
-    const now  = new Date()
-    now.setUTCHours(0,0,0,0);
+    const now = new Date();
+    now.setUTCHours(0, 0, 0, 0);
     const oldPrsMaxDate = new Date(now.getTime() - thirtyDaysInMiliseconds);
 
     totals.longRunningPrsCount = 0;
@@ -79,10 +78,10 @@ export function useRepositoryStats() {
       return;
     }
 
-    if(untilDate >= oldPrsMaxDate) {
-      untilDay = formatDate(oldPrsMaxDate.toISOString())
+    if (untilDate >= oldPrsMaxDate) {
+      untilDay = formatDate(oldPrsMaxDate.toISOString());
     }
-   
+
     const res = await GithubRepository.searchForIssuesAndPr(
       { owner: params.owner, repo: params.repo },
       `is:pr is:open base:${params.branch} created:${sinceDay}..${untilDay}`,

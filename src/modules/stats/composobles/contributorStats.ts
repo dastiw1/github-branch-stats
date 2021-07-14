@@ -21,9 +21,10 @@ export function useContributorStats() {
     const all: Record<number, ContributorItem> = {};
     state.commits.forEach((item) => {
       const author = item.author ? item.author : item.committer;
-      if(author == null) {
+      if (author == null) {
         return;
       }
+
       if (author.id in all) {
         all[author.id].commitsCount++;
         return;
