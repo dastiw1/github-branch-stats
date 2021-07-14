@@ -1,4 +1,8 @@
-export function getNestedValue(obj: any, path: (string | number)[], fallback: any = undefined) : any {
+export function getNestedValue(
+  obj: any,
+  path: (string | number)[],
+  fallback: any = undefined,
+): any {
   const last = path.length - 1;
 
   if (last < 0) return obj === undefined ? fallback : obj;
