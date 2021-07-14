@@ -191,6 +191,11 @@ export default defineComponent({
             break;
           case 'closed':
             await getClosePrsCount(state.params, { per_page: 25, page });
+            break;
+
+          case 'longRunning':
+            await getLongRunningPrs(state.params, { per_page: 25, page });
+            break;
         }
       }
     }

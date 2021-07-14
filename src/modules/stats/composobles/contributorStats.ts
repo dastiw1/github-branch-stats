@@ -20,15 +20,19 @@ export function useContributorStats() {
   const allContributors = computed<Record<number, ContributorItem>>(() => {
     const all: Record<number, ContributorItem> = {};
     state.commits.forEach((item) => {
-      if (item.author.id in all) {
-        all[item.author.id].commitsCount++;
+      const author = item.author ? item.author : item.committer;
+      if(author == null) {
+        return;
+      }
+      if (author.id in all) {
+        all[author.id].commitsCount++;
         return;
       }
 
-      all[item.author.id] = {
-        avatarUrl: item.author.avatar_url,
-        id: item.author.id,
-        login: item.author.login,
+      all[author.id] = {
+        avatarUrl: author.avatar_url,
+        id: author.id,
+        login: author.login,
         commitsCount: 1,
       };
     });
